@@ -7,9 +7,9 @@
 #include "statRateCal.h"
 #include "util.h"
 
-void * getDataFromGeneralDB(void *arg);
+void getDataFromGeneralDB(OCI_Thread *thread,void *arg);
 
-void * getDataFromTMSPRD(void *arg);
+void getDataFromTMSPRD(OCI_Thread *thread,void *arg);
 
 void saveDRData(Res_RateCalu *arg);
 
@@ -64,10 +64,9 @@ void saveDRData(Res_RateCalu *arg) {
 
 int main(int argc, char** argv) {
 
-    pthread_t t_blct2;
-    pthread_t t_blct3;
-    //pthread_t t_blctyd;
-    pthread_t t_blct;
+    OCI_Thread *t_blct2;
+    OCI_Thread *t_blct3;
+    OCI_Thread *t_blct;
 
 	Res_RateCalu * res_cal_blct2 = (Res_RateCalu *)malloc(sizeof(Res_RateCalu));
 	Res_RateCalu * res_cal_blct3 = (Res_RateCalu *)malloc(sizeof(Res_RateCalu));
@@ -79,8 +78,8 @@ int main(int argc, char** argv) {
     //strcpy(res_cal_blctyd->_terminal, "BLCTYD");
     strcpy(res_cal_blct->_terminal, "BLCT");
 
-
-	if (!OCI_Initialize(NULL, NULL, OCI_ENV_DEFAULT | OCI_ENV_THREADED))
+       
+	if (!OCI_Initialize(err_handler, NULL, OCI_ENV_DEFAULT | OCI_ENV_THREADED))
         return -1;
 	
 	if (argc > 3) {
@@ -170,21 +169,26 @@ int main(int argc, char** argv) {
     strcpy(res_cal_blct->_dbUser, "system");
     strcpy(res_cal_blct->_dbPassword, "oracle");
 
-    pthread_create(&t_blct2,NULL,getDataFromGeneralDB,res_cal_blct2);
+    t_blct2 = OCI_ThreadCreate();
+    t_blct3 = OCI_ThreadCreate();
+    t_blct = OCI_ThreadCreate();
 
-    pthread_create(&t_blct3,NULL,getDataFromGeneralDB,res_cal_blct3);
+    OCI_ThreadRun(t_blct2, getDataFromGeneralDB, res_cal_blct2);
 
-    //pthread_create(&t_blctyd,NULL,getDataFromGeneralDB,res_cal_blctyd);
+    OCI_ThreadRun(t_blct3, getDataFromGeneralDB, res_cal_blct3);
 
-    pthread_create(&t_blct,NULL,getDataFromTMSPRD,res_cal_blct);
+    OCI_ThreadRun(t_blct, getDataFromTMSPRD, res_cal_blct);
 
-    pthread_join(t_blct2,NULL);
+    OCI_ThreadJoin(t_blct2);
+    OCI_ThreadFree(t_blct2);
 
-    pthread_join(t_blct3,NULL);
+    OCI_ThreadJoin(t_blct3);
+    OCI_ThreadFree(t_blct3);
 
-    //pthread_join(t_blctyd,NULL);
+    OCI_ThreadJoin(t_blct);
+    OCI_ThreadFree(t_blct);
 
-    pthread_join(t_blct,NULL);
+    
 
     if (argc == 3) {
 
@@ -253,7 +257,7 @@ int main(int argc, char** argv) {
 
 }
 
-void * getDataFromGeneralDB(void *arg) {
+void getDataFromGeneralDB(OCI_Thread *thread,void *arg) {
 
 	Res_RateCalu * context = (Res_RateCalu *)arg;
 	OCI_Connection *conn;
@@ -312,6 +316,8 @@ void * getDataFromGeneralDB(void *arg) {
     OCI_BindString(st, ":vGroup_half_Num", _group_half_Num, 16);
     OCI_Execute(st);
     
+    printf("fuck you BLCT2!!!!\n");    
+     
     context->_totalNumDtoI = atoi(_totalNum);
     context->_qualNumDtoI = atoi(_qualified_Num);
     context->_groupNumDtoI = atoi(_group_Num);
@@ -320,11 +326,11 @@ void * getDataFromGeneralDB(void *arg) {
     OCI_StatementFree(st);
     OCI_ConnectionFree(conn);
 
-    return ((void*)EXIT_SUCCESS);
+    //return ((void*)EXIT_SUCCESS);
 
 }
 
-void * getDataFromTMSPRD(void *arg) {
+void getDataFromTMSPRD(OCI_Thread *thread,void *arg) {
 
 	Res_RateCalu * context = (Res_RateCalu *)arg;
 	OCI_Connection *conn;
@@ -364,7 +370,7 @@ void * getDataFromTMSPRD(void *arg) {
     OCI_BindString(st, ":vGroup_half_Num_DtoD", _group_half_NumDtoD, 16);
     OCI_BindString(st, ":vGroup_Half_Num_DtoI", _group_half_NumDtoI, 16);
     OCI_Execute(st);
-    
+    printf("fuck you BLCT !!!! \n");
     context->_totalNumDtoD = atoi(_totalNum);
     context->_qualNumDtoD = atoi(_qualified_NumDtoD);
     context->_groupNumDtoD = atoi(_group_Num);
@@ -376,7 +382,7 @@ void * getDataFromTMSPRD(void *arg) {
 
     OCI_StatementFree(st);
     OCI_ConnectionFree(conn);
-    return ((void*)EXIT_SUCCESS);
+    //return ((void*)EXIT_SUCCESS);
 
 }  
 
