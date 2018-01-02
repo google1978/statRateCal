@@ -315,8 +315,6 @@ void getDataFromGeneralDB(OCI_Thread *thread,void *arg) {
     OCI_BindString(st, ":vGroup_Num", _group_Num, 16);
     OCI_BindString(st, ":vGroup_half_Num", _group_half_Num, 16);
     OCI_Execute(st);
-    
-    printf("fuck you BLCT2!!!!\n");    
      
     context->_totalNumDtoI = atoi(_totalNum);
     context->_qualNumDtoI = atoi(_qualified_Num);
@@ -370,7 +368,7 @@ void getDataFromTMSPRD(OCI_Thread *thread,void *arg) {
     OCI_BindString(st, ":vGroup_half_Num_DtoD", _group_half_NumDtoD, 16);
     OCI_BindString(st, ":vGroup_Half_Num_DtoI", _group_half_NumDtoI, 16);
     OCI_Execute(st);
-    printf("fuck you BLCT !!!! \n");
+    
     context->_totalNumDtoD = atoi(_totalNum);
     context->_qualNumDtoD = atoi(_qualified_NumDtoD);
     context->_groupNumDtoD = atoi(_group_Num);
