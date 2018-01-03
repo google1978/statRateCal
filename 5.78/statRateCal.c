@@ -7,7 +7,9 @@
 #include "statRateCal.h"
 #include "util.h"
 
-void getDataFromGeneralDB(OCI_Thread *thread,void *arg);
+void getDataFromB3CDB(OCI_Thread *thread,void *arg);
+
+void getDataFromB2CTDB(OCI_Thread *thread,void *arg);
 
 void getDataFromTMSPRD(OCI_Thread *thread,void *arg);
 
@@ -173,9 +175,9 @@ int main(int argc, char** argv) {
     t_blct3 = OCI_ThreadCreate();
     t_blct = OCI_ThreadCreate();
 
-    OCI_ThreadRun(t_blct2, getDataFromGeneralDB, res_cal_blct2);
+    OCI_ThreadRun(t_blct2, getDataFromB2CTDB, res_cal_blct2);
 
-    OCI_ThreadRun(t_blct3, getDataFromGeneralDB, res_cal_blct3);
+    OCI_ThreadRun(t_blct3, getDataFromB3CDB, res_cal_blct3);
 
     OCI_ThreadRun(t_blct, getDataFromTMSPRD, res_cal_blct);
 
@@ -257,7 +259,7 @@ int main(int argc, char** argv) {
 
 }
 
-void getDataFromGeneralDB(OCI_Thread *thread,void *arg) {
+void getDataFromB3CDB(OCI_Thread *thread,void *arg) {
 
 	Res_RateCalu * context = (Res_RateCalu *)arg;
 	OCI_Connection *conn;
@@ -268,6 +270,77 @@ void getDataFromGeneralDB(OCI_Thread *thread,void *arg) {
 	char _qualified_Num[16];
 	char _group_Num[16];
 	char _group_half_Num[16];
+
+    conn = OCI_ConnectionCreate(context->_dbName, context->_dbUser, context->_dbPassword, OCI_SESSION_DEFAULT);
+    OCI_Statement  *st;
+    st = OCI_StatementCreate(conn);
+    
+    OCI_Prepare(st, OTEXT("begin ")
+    OTEXT("  SP_STATISTICS_QUALIFIED_RATE")
+    OTEXT("(:vStart_Time,:vEnd_Time,:vTotalNum,:vQualified_Num,:vErrSign,:vErrDesc,:vQualified_Rate,")
+    OTEXT(":vGroup_half_rate,:vGroup_Num,:vGroup_half_Num); ")
+    OTEXT("end; "));
+                
+    OCI_BindString(st, ":vStart_Time", context->_startDate, 16);
+    OCI_BindString(st, ":vEnd_Time", context->_endDate, 16);
+
+    OCI_BindString(st, ":vTotalNum", _totalNum, 16);
+    OCI_BindString(st, ":vQualified_Num", _qualified_Num, 16);
+    OCI_BindString(st, ":vErrSign", _errSign, 8);
+    OCI_BindString(st, ":vErrDesc", _errDesc, 1024);
+    OCI_BindString(st, ":vQualified_Rate", context->_qualifiedRateDtoD, 16);
+    OCI_BindString(st, ":vGroup_half_rate", context->_groupHalfRateDtoD, 16);
+    OCI_BindString(st, ":vGroup_Num", _group_Num, 16);
+    OCI_BindString(st, ":vGroup_half_Num", _group_half_Num, 16);
+    OCI_Execute(st);
+    
+    context->_totalNumDtoD = atoi(_totalNum);
+    context->_qualNumDtoD = atoi(_qualified_Num);
+    context->_groupNumDtoD = atoi(_group_Num);
+    context->_groupQualNumDtoD = atoi(_group_half_Num);
+
+    OCI_Prepare(st, OTEXT("begin ")
+    OTEXT("  SP_STATISTICS_QUALIFIED_RATE4")
+    OTEXT("(:vStart_Time,:vEnd_Time,:vTotalNum,:vQualified_Num,:vQualified_Rate,")
+    OTEXT(":vGroup_Num,:vGroup_half_Num,:vGroup_half_rate,:vErrSign,:vErrDesc); ")
+    OTEXT("end; "));
+                
+    OCI_BindString(st, ":vStart_Time", context->_startDate, 16);
+    OCI_BindString(st, ":vEnd_Time", context->_endDate, 16);
+
+    OCI_BindString(st, ":vTotalNum", _totalNum, 16);
+    OCI_BindString(st, ":vQualified_Num", _qualified_Num, 16);
+    OCI_BindString(st, ":vErrSign", _errSign, 8);
+    OCI_BindString(st, ":vErrDesc", _errDesc, 1024);
+    OCI_BindString(st, ":vQualified_Rate", context->_qualifiedRateDtoI, 16);
+    OCI_BindString(st, ":vGroup_half_rate", context->_groupHalfRateDtoI, 16);
+    OCI_BindString(st, ":vGroup_Num", _group_Num, 16);
+    OCI_BindString(st, ":vGroup_half_Num", _group_half_Num, 16);
+    OCI_Execute(st);
+     
+    context->_totalNumDtoI = atoi(_totalNum);
+    context->_qualNumDtoI = atoi(_qualified_Num);
+    context->_groupNumDtoI = atoi(_group_Num);
+    context->_groupQualNumDtoI = atoi(_group_half_Num);
+
+    OCI_StatementFree(st);
+    OCI_ConnectionFree(conn);
+
+    //return ((void*)EXIT_SUCCESS);
+
+}
+
+void getDataFromB2CTDB(OCI_Thread *thread,void *arg) {
+
+    Res_RateCalu * context = (Res_RateCalu *)arg;
+    OCI_Connection *conn;
+
+    char _totalNum[16];
+    char _errSign[8];
+    char _errDesc[1024];
+    char _qualified_Num[16];
+    char _group_Num[16];
+    char _group_half_Num[16];
 
     conn = OCI_ConnectionCreate(context->_dbName, context->_dbUser, context->_dbPassword, OCI_SESSION_DEFAULT);
     OCI_Statement  *st;
